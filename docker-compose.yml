@@ -1,0 +1,52 @@
+version: '3'
+services:
+
+  # 1. Container: Collects Tweets from twitter
+  tweet_collector:
+    container_name: tweet_collector
+    build: tweet_collector/
+    volumes:
+    - ./tweet_collector/:/app # Connects the directory ./tweet_collector with
+                              # the container directory /app.
+                              # So if you change something in the .py file,
+                              # you dont have to rebuild everytime.
+    depends_on:
+    - mongodb
+
+  # 2. Container: Stores the raw tweets
+  mongodb:
+    container_name: mongodb
+    image: mongo
+    ports:
+    - 27017:27017
+
+  # 3. Container: ETL Job
+  etl_job:
+    container_name: etl_job
+    build: etl_job/ # Sucht nach Ordner etl_job
+    volumes:
+      - ./etl_job/:/app
+    depends_on:
+      - mongodb
+      - mypg
+
+  # 4. Container: Postgres DB. For transformed files to be uploaded.
+  mypg:
+    container_name: mypg
+    image: postgres
+    ports:
+      - 5555:5432
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=1234
+
+  # 5. Container: Slack-Bot
+  slack_bot:
+    container_name: slack_bot
+    build: slack_bot/
+    volumes:
+    - ./slack_bot/:/app
+    depends_on:
+    - mypg
+     #environment:
+       #- SLACKBOT_TOKEN = xoxb-1263169162151-1381809494389-uBK8Rv1RQ2t9VS5Whj5Cmiot
